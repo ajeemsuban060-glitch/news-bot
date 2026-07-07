@@ -1,0 +1,44 @@
+name: Daily News Digest
+
+on:
+  schedule:
+    # 8:00 AM IST = 2:30 AM UTC (India is UTC+5:30, no DST).
+    - cron: "30 2 * * *"
+  # Lets you trigger a run manually from the Actions tab for testing,
+  # without waiting for the schedule.
+  workflow_dispatch: {}
+
+permissions:
+  contents: write  # needed to commit telegram_state.json back to the repo
+
+jobs:
+  send-digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run digest pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python main.py
+
+      - name: Persist telegram_state.json for tomorrow's cleanup
+        run: |
+          git config user.name "news-bot"
+          git config user.email "news-bot@users.noreply.github.com"
+          git add telegram_state.json
+          # Only commit if the state file actually changed — avoids an
+          # empty commit failing the workflow on days with no message activity.
+          git diff --staged --quiet || git commit -m "chore: update telegram_state.json [skip ci]"
+          git push
