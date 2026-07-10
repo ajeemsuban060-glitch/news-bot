@@ -3,7 +3,7 @@ name: Daily News Digest
 on:
   schedule:
     # 8:00 AM IST = 2:30 AM UTC (India is UTC+5:30, no DST).
-    - cron: "30 2 * * *"
+    - cron: "47 2 * * *"
   # Lets you trigger a run manually from the Actions tab for testing,
   # without waiting for the schedule.
   workflow_dispatch: {}
