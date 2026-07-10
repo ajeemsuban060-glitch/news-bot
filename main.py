@@ -3,19 +3,33 @@ Main entry point for the daily news digest pipeline:
     fetch (per category) -> dedup -> summarize (Gemini) -> deliver (Telegram)
 
 Run with:
-    python main.py
+    python main.py                 # normal run (only in GitHub Actions)
+    TEST_MODE=1 python main.py     # local/manual testing — see telegram_delivery.py
 
 This is the script the GitHub Actions cron job will invoke.
+
+TEST_MODE exists because telegram_state.json is only committed/pushed back
+to GitHub from inside the Actions workflow. Any local run that touches the
+real chat and real state file without that push step creates orphaned
+messages the cleanup logic can never find again. TEST_MODE=1 forces all
+local/manual runs onto a separate test chat and skips state tracking
+entirely, so they can never corrupt production state.
 """
 
+import os
 import sys
 
 from fetchers import fetch_all_categories
 from summarizer import summarize_all
 from telegram_delivery import send_daily_digest
 
+TEST_MODE = os.environ.get("TEST_MODE") == "1"
+
 
 def main() -> int:
+    if TEST_MODE:
+        print("[MAIN] TEST_MODE=1 - using test chat, state tracking disabled.")
+
     print("[MAIN] Fetching + deduping all categories...")
     fetched = fetch_all_categories()
 
